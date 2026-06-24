@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings  Booking[]
+}
+
+model Bus {
+  id             String   @id @default(cuid())
+  busName        String
+  busNumber      String   @unique
+  fromLocation   String
+  toLocation     String
+  departureTime  DateTime
+  arrivalTime    DateTime
+  totalSeats     Int
+  availableSeats Int
+  price          Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bookings       Booking[]
+}
+
+model Booking {
+  id           String   @id @default(uuid())
+  busId        String
+  userId       String
+  seats        Int
+  totalPrice   Int
+  ticketNumber String
+  createdAt    DateTime @default(now())
+
+  bus  Bus  @relation(fields: [busId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
