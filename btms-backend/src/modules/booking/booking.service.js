@@ -7,61 +7,95 @@ const PDFDocument = require("pdfkit");
 // ==============================
 // CREATE BOOKING
 // ==============================
-const createBooking = async ({ userId, busId, seats }) => {
-  const bus = await prisma.bus.findUnique({
-    where: { id: busId },
-  });
+const createBooking = async ({ userId, busId, seat }) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Check bus
+    const bus = await tx.bus.findUnique({
+      where: { id: busId },
+    });
 
-  if (!bus) throw new Error("Bus not found");
+    if (!bus) throw new Error("Bus not found");
 
-  if (bus.availableSeats < seats) {
-    throw new Error("Not enough seats available");
-  }
-
-  const ticketNumber = generateTicketNumber();
-
-  const booking = await prisma.booking.create({
-    data: {
-      userId,
-      busId,
-      seats: Number(seats),
-      totalPrice: Number(seats) * bus.price,
-      ticketNumber,
-    },
-    include: {
-      bus: true,
-      user: true,
-    },
-  });
-
-  // reduce seats AFTER booking
-  await prisma.bus.update({
-    where: { id: busId },
-    data: {
-      availableSeats: {
-        decrement: Number(seats),
+    // 2. Get seats
+    const seats = await tx.seat.findMany({
+      where: {
+        busId,
+        seatNumber: { in: seat },
       },
-    },
+    });
+
+    // 3. Validate seats exist
+    if (seats.length !== seat.length) {
+      throw new Error("Some seats do not exist");
+    }
+
+    // 4. Check already booked seats
+    const alreadyBooked = seats.filter((s) => s.isBooked);
+
+    if (alreadyBooked.length > 0) {
+      throw new Error(
+        `Seats already booked: ${alreadyBooked
+          .map((s) => s.seatNumber)
+          .join(", ")}`
+      );
+    }
+
+    // 5. Create booking
+    const booking = await tx.booking.create({
+      data: {
+        userId,
+        busId,
+        seats: seat.length,
+        totalPrice: seat.length * bus.price,
+        ticketNumber: generateTicketNumber(),
+      },
+      include: {
+        bus: true,
+        user: true,
+      },
+    });
+
+    // 6. Lock seats (mark as booked)
+    await tx.seat.updateMany({
+      where: {
+        busId,
+        seatNumber: { in: seat },
+      },
+      data: {
+        isBooked: true,
+        bookingId: booking.id,
+      },
+    });
+
+    // 7. Reduce available seats
+    await tx.bus.update({
+      where: { id: busId },
+      data: {
+        availableSeats: {
+          decrement: seat.length,
+        },
+      },
+    });
+
+    // 8. Generate QR Code (MERGED PART)
+    const qrData = JSON.stringify({
+      bookingId: booking.id,
+      ticketNumber: booking.ticketNumber,
+      userId: booking.userId,
+      busId: booking.busId,
+      seats: seat,
+      totalPrice: booking.totalPrice,
+      createdAt: booking.createdAt,
+    });
+
+    const qrCode = await QRCode.toDataURL(qrData);
+
+    // 9. Return final response
+    return {
+      ...booking,
+      qrCode,
+    };
   });
-
-  // 3. GENERATE QR CODE
-  const QRCode = require("qrcode");
-
-  const qrData = JSON.stringify({
-    bookingId: booking.id,
-    ticketNumber: booking.ticketNumber,
-    userId: booking.userId,
-    busId: booking.busId,
-    seats: booking.seats,
-    totalPrice: booking.totalPrice,
-  });
-
-  const qrCode = await QRCode.toDataURL(qrData);
-
-  return {
-    ...booking,
-    qrCode,
-  }
 };
 
 
@@ -196,6 +230,10 @@ const deleteBooking = async (bookingId, userId, role) => {
       throw new Error("Not authorized");
     }
 
+    if (booking.status === "CONFIRMED") {
+      throw new Error("Cannot cancel a confirmed booking");
+    }
+
     await tx.bus.update({
       where: { id: booking.busId },
       data: {
@@ -207,6 +245,9 @@ const deleteBooking = async (bookingId, userId, role) => {
 
     return await tx.booking.delete({
       where: { id: bookingId },
+      data:{
+        status :"CANCELLED"
+      }
     });
   });
 };
@@ -260,6 +301,23 @@ const generateTicketPDF = async (bookingId) => {
     doc.end();
   });
 };
+
+
+// Confirm booking service
+const confirmBooking = async (bookingId)=>{
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+  });
+
+  if (!booking) throw new Error("Booking not found");
+
+  return prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      status: "CONFIRMED",
+    },
+  });
+}
 
 
 // ==============================

@@ -135,3 +135,16 @@ exports.downloadTicket = asyncHandler(async (req, res) => {
 
   res.send(pdfBuffer);
 });
+
+
+// BOOKING CONFIRMED
+exports.confirmBooking = asyncHandler(async (req, res) => {
+  const booking = await bookingService.confirmBooking(
+    req.params.id
+  );
+  res.json({
+    success: true,
+    message: "Booking confirmed successfully",
+    data: booking,
+  });
+});

@@ -2,11 +2,16 @@ const express = require("express");
 const router = express.Router();
 
 const busController = require("./bus.controller");
-
 const auth = require("../../middleware/auth.middleware");
 const authorize = require("../../middleware/role.middleware");
 
-// CREATE BUS
+/**
+ * =========================
+ * BUS ROUTES (PRODUCTION SAFE)
+ * =========================
+ */
+
+// CREATE BUS (ADMIN / SUPER_ADMIN only)
 router.post(
   "/",
   auth,
@@ -14,10 +19,13 @@ router.post(
   busController.createBus
 );
 
-// GET ALL BUSES
+// GET ALL BUSES (PUBLIC)
 router.get("/", busController.getAllBuses);
 
-// GET BUS BY ID
+// GET BUS SEATS (PUBLIC or AUTH optional)
+router.get("/:id/seats", busController.getBusSeats);
+
+// GET BUS BY ID (PUBLIC)
 router.get("/:id", busController.getBusById);
 
 module.exports = router;

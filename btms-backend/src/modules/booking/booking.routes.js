@@ -52,11 +52,24 @@ router.delete(
   bookingController.deleteBooking
 );
 
+router.patch(
+  "/:id/cancel",
+  auth,
+  bookingController.deleteBooking
+);
+
 // GENERATE TICKET PDF
 router.get(
   "/:id/ticket",
   auth,
   bookingController.downloadTicket
 );
+
+router.patch(
+  "/:id/confirm",
+  auth,
+  authorize("ADMIN","SUPER_ADMIN"),
+  bookingController.confirmBooking
+)
 
 module.exports = router;

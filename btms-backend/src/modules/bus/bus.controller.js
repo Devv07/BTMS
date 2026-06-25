@@ -1,16 +1,65 @@
 const asyncHandler = require("express-async-handler");
 const busService = require("./bus.service");
 
+/**
+ * ======================
+ * CREATE BUS
+ * ======================
+ */
 exports.createBus = asyncHandler(async (req, res) => {
-  const bus = await busService.createBus(req.body);
+  const {
+    busName,
+    busNumber,
+    fromLocation,
+    toLocation,
+    departureTime,
+    arrivalTime,
+    totalSeats,
+    price,
+    seatLayout,
+  } = req.body;
+
+  if (
+    !busName ||
+    !busNumber ||
+    !fromLocation ||
+    !toLocation ||
+    !departureTime ||
+    !arrivalTime ||
+    !totalSeats ||
+    !price
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+    });
+  }
+
+  const bus = await busService.createBus({
+    busName,
+    busNumber,
+    fromLocation,
+    toLocation,
+    departureTime,
+    arrivalTime,
+    totalSeats,
+    price,
+    seatLayout: seatLayout || [],
+     // Default to empty array if not provided
+  });
 
   res.status(201).json({
     success: true,
-    message: "Bus created",
+    message: "Bus created successfully",
     data: bus,
   });
 });
 
+/**
+ * ======================
+ * GET ALL BUSES
+ * ======================
+ */
 exports.getAllBuses = asyncHandler(async (req, res) => {
   const buses = await busService.getAllBuses();
 
@@ -20,6 +69,11 @@ exports.getAllBuses = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * ======================
+ * GET BUS BY ID
+ * ======================
+ */
 exports.getBusById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -35,5 +89,21 @@ exports.getBusById = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: bus,
+  });
+});
+
+/**
+ * ======================
+ * GET BUS SEATS
+ * ======================
+ */
+exports.getBusSeats = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const seats = await busService.getBusSeats(id);
+
+  res.json({
+    success: true,
+    data: seats,
   });
 });

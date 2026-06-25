@@ -22,7 +22,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings  Booking[]
+  bookings Booking[]
 }
 
 model Bus {
@@ -36,21 +36,49 @@ model Bus {
   totalSeats     Int
   availableSeats Int
   price          Float
+  type           String
+  seatConfig     Json
+  seatLayout     Json
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  bookings       Booking[]
+  bookings Booking[]
+  seats    Seat[]
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
 }
 
 model Booking {
-  id           String   @id @default(uuid())
+  id           String        @id @default(uuid())
   busId        String
   userId       String
   seats        Int
   totalPrice   Int
   ticketNumber String
-  createdAt    DateTime @default(now())
+  status       BookingStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
 
   bus  Bus  @relation(fields: [busId], references: [id])
   user User @relation(fields: [userId], references: [id])
+
+  seatSelections Seat[]
+}
+
+model Seat {
+  id         String  @id @default(uuid())
+  seatNumber String
+  isBooked   Boolean @default(false)
+  isHeld     Boolean @default(false)
+  holdExpiry DateTime?
+  busId      String
+  type       String
+  row        Int?
+  col        Int?
+  bus        Bus      @relation(fields: [busId], references: [id])
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 }
