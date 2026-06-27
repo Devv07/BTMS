@@ -8,6 +8,9 @@ const authRoutes = require("./modules/auth/auth.routes");
 const busRoutes = require("./modules/bus/bus.routes");
 const bookingRoutes = require("./modules/booking/booking.routes");
 const seatRoutes = require("./modules/seat/seat.routes");
+const seatLockRoutes = require("./modules/seatLock/seatLock.route");
+const paymentRoutes = require("./modules/payment/payment.route");
+const startSeatLockCleaner = require("./jobs/seatLockerJob");
 
 const app = express();
 
@@ -23,6 +26,8 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/buses", busRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/seats", seatRoutes);
+app.use("/api/v1/seat-locks", seatLockRoutes);
+app.use("/api/v1/payment", paymentRoutes);
 
 // HEALTH CHECK
 app.get("/", (req, res) => {

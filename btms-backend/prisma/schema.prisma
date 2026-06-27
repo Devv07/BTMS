@@ -13,6 +13,12 @@ enum Role {
   SUPER_ADMIN
 }
 
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
 model User {
   id        String   @id @default(uuid())
   fullName  String
@@ -22,28 +28,44 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings Booking[]
+  bookings  Booking[]
+  seatLocks SeatLock[]
+  Payment   Payment[]
+}
+
+enum BusType {
+  AC
+  NON_AC
+  DELUXE
+  SLEEPER
+  EV
+  MINI
+  MICRO
 }
 
 model Bus {
   id             String   @id @default(cuid())
   busName        String
-  busNumber      String   @unique
+  busNumber      String
   fromLocation   String
   toLocation     String
   departureTime  DateTime
   arrivalTime    DateTime
   totalSeats     Int
   availableSeats Int
-  price          Float
+  price          Int
   type           String
-  seatConfig     Json
-  seatLayout     Json
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 
-  bookings Booking[]
-  seats    Seat[]
+  seatConfig Json
+  seatLayout Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking   Booking[]
+  seats     Seat[]
+  seatLocks SeatLock[]
+  Payment   Payment[]
 }
 
 enum BookingStatus {
@@ -53,14 +75,16 @@ enum BookingStatus {
 }
 
 model Booking {
-  id           String        @id @default(uuid())
+  id           String   @id @default(uuid())
   busId        String
   userId       String
+  seatIds      Json
+  amount       Int
   seats        Int
   totalPrice   Int
   ticketNumber String
-  status       BookingStatus @default(PENDING)
-  createdAt    DateTime      @default(now())
+  status       String   @default("CONFIRMED")
+  createdAt    DateTime @default(now())
 
   bus  Bus  @relation(fields: [busId], references: [id])
   user User @relation(fields: [userId], references: [id])
@@ -69,16 +93,50 @@ model Booking {
 }
 
 model Seat {
-  id         String  @id @default(uuid())
+  id         String     @id @default(uuid())
   seatNumber String
-  isBooked   Boolean @default(false)
-  isHeld     Boolean @default(false)
+  status     SeatStatus @default(AVAILABLE)
+  isHeld     Boolean    @default(false)
   holdExpiry DateTime?
   busId      String
   type       String
   row        Int?
   col        Int?
-  bus        Bus      @relation(fields: [busId], references: [id])
-  bookingId String?
-  booking   Booking? @relation(fields: [bookingId], references: [id])
+  bus        Bus        @relation(fields: [busId], references: [id])
+  bookingId  String?
+  booking    Booking?   @relation(fields: [bookingId], references: [id])
+
+  seatLocks SeatLock[]
+
+  @@unique([busId, seatNumber])
+}
+
+model SeatLock {
+  id     String @id @default(cuid())
+  seatId String
+  busId  String
+  userId String
+
+  expiresAt DateTime
+  status    String   @default("ACTIVE") // ACTIVE | EXPIRED | CONFIRMED
+
+  createdAt DateTime @default(now())
+
+  seat Seat @relation(fields: [seatId], references: [id])
+  bus  Bus  @relation(fields: [busId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id     String @id @default(cuid())
+  userId String
+  busId  String
+  amount Int
+
+  status    String   @default("PENDING")
+  transactionId String?  @unique
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  bus  Bus  @relation(fields: [busId], references: [id])
 }

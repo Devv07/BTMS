@@ -9,7 +9,8 @@ const PDFDocument = require("pdfkit");
 // ==============================
 const createBooking = async ({ userId, busId, seat }) => {
   return await prisma.$transaction(async (tx) => {
-    // 1. Check bus
+
+    // 1. Get bus
     const bus = await tx.bus.findUnique({
       where: { id: busId },
     });
@@ -29,12 +30,14 @@ const createBooking = async ({ userId, busId, seat }) => {
       throw new Error("Some seats do not exist");
     }
 
-    // 4. Check already booked seats
-    const alreadyBooked = seats.filter((s) => s.isBooked);
+    // 4. Check already booked / locked
+    const notAvailable = seats.filter(
+      (s) => s.status === "BOOKED" || s.status === "LOCKED"
+    );
 
-    if (alreadyBooked.length > 0) {
+    if (notAvailable.length > 0) {
       throw new Error(
-        `Seats already booked: ${alreadyBooked
+        `Seats already booked: ${notAvailable
           .map((s) => s.seatNumber)
           .join(", ")}`
       );
@@ -55,19 +58,19 @@ const createBooking = async ({ userId, busId, seat }) => {
       },
     });
 
-    // 6. Lock seats (mark as booked)
+    // 6. LOCK SEATS CORRECTLY
     await tx.seat.updateMany({
       where: {
         busId,
         seatNumber: { in: seat },
       },
       data: {
-        isBooked: true,
+        status: "BOOKED",
         bookingId: booking.id,
       },
     });
 
-    // 7. Reduce available seats
+    // 7. Update bus seats
     await tx.bus.update({
       where: { id: busId },
       data: {
@@ -77,20 +80,15 @@ const createBooking = async ({ userId, busId, seat }) => {
       },
     });
 
-    // 8. Generate QR Code (MERGED PART)
-    const qrData = JSON.stringify({
-      bookingId: booking.id,
-      ticketNumber: booking.ticketNumber,
-      userId: booking.userId,
-      busId: booking.busId,
-      seats: seat,
-      totalPrice: booking.totalPrice,
-      createdAt: booking.createdAt,
-    });
+    // 8. QR CODE
+    const qrCode = await QRCode.toDataURL(
+      JSON.stringify({
+        bookingId: booking.id,
+        ticketNumber: booking.ticketNumber,
+        seats: seat,
+      })
+    );
 
-    const qrCode = await QRCode.toDataURL(qrData);
-
-    // 9. Return final response
     return {
       ...booking,
       qrCode,
@@ -100,69 +98,37 @@ const createBooking = async ({ userId, busId, seat }) => {
 
 
 // ==============================
-// GET ALL BOOKINGS (FILTER + PAGINATION)
+// GET ALL BOOKINGS
 // ==============================
 const getAllBookings = async (query) => {
-  const {
-    page = 1,
-    limit = 10,
-    search,
-    sort = "latest",
-    busId,
-    userId,
-    fromDate,
-    toDate,
-  } = query;
-
-  const skip = (Number(page) - 1) * Number(limit);
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 10);
+  const skip = (page - 1) * limit;
 
   const where = {};
 
-  if (busId) where.busId = busId;
-  if (userId) where.userId = userId;
+  if (query.busId) where.busId = query.busId;
+  if (query.userId) where.userId = query.userId;
 
-  if (fromDate || toDate) {
-    where.createdAt = {};
-    if (fromDate) where.createdAt.gte = new Date(fromDate);
-    if (toDate) where.createdAt.lte = new Date(toDate);
-  }
-
-  if (search) {
-    where.OR = [
-      {
-        ticketNumber: {
-          contains: search,
-          mode: "insensitive",
-        },
-      },
-    ];
-  }
-
-  const orderBy =
-    sort === "oldest"
-      ? { createdAt: "asc" }
-      : { createdAt: "desc" };
-
-  const [bookings, total] = await Promise.all([
+  const [data, total] = await Promise.all([
     prisma.booking.findMany({
       where,
       include: {
         bus: true,
         user: true,
       },
-      orderBy,
+      orderBy: { createdAt: "desc" },
       skip,
-      take: Number(limit),
+      take: limit,
     }),
     prisma.booking.count({ where }),
   ]);
 
   return {
-    data: bookings,
+    data,
     pagination: {
       total,
-      page: Number(page),
-      limit: Number(limit),
+      page,
       totalPages: Math.ceil(total / limit),
     },
   };
@@ -206,34 +172,41 @@ const getMyBookings = async (userId) => {
     include: {
       bus: true,
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
 };
 
 
 // ==============================
-// CANCEL BOOKING (TRANSACTION SAFE)
+// CANCEL BOOKING (FIXED)
 // ==============================
 const deleteBooking = async (bookingId, userId, role) => {
   return await prisma.$transaction(async (tx) => {
+
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
     });
 
-    if (!booking) {
-      throw new Error("Booking not found");
-    }
+    if (!booking) throw new Error("Booking not found");
 
     if (role === "USER" && booking.userId !== userId) {
       throw new Error("Not authorized");
     }
 
     if (booking.status === "CONFIRMED") {
-      throw new Error("Cannot cancel a confirmed booking");
+      throw new Error("Cannot cancel confirmed booking");
     }
 
+    // 1. Free seats
+    await tx.seat.updateMany({
+      where: { bookingId },
+      data: {
+        status: "AVAILABLE",
+        bookingId: null,
+      },
+    });
+
+    // 2. Restore seats in bus
     await tx.bus.update({
       where: { id: booking.busId },
       data: {
@@ -243,18 +216,19 @@ const deleteBooking = async (bookingId, userId, role) => {
       },
     });
 
-    return await tx.booking.delete({
+    // 3. Cancel booking (FIXED)
+    return tx.booking.update({
       where: { id: bookingId },
-      data:{
-        status :"CANCELLED"
-      }
+      data: {
+        status: "CANCELLED",
+      },
     });
   });
 };
 
 
 // ==============================
-// PDF TICKET GENERATION
+// PDF TICKET
 // ==============================
 const generateTicketPDF = async (bookingId) => {
   const booking = await prisma.booking.findUnique({
@@ -267,14 +241,12 @@ const generateTicketPDF = async (bookingId) => {
 
   if (!booking) throw new Error("Booking not found");
 
-  const qrData = JSON.stringify({
-    ticketNumber: booking.ticketNumber,
-    bookingId: booking.id,
-    userId: booking.userId,
-    busId: booking.busId,
-  });
-
-  const qrCodeImage = await QRCode.toDataURL(qrData);
+  const qrCode = await QRCode.toDataURL(
+    JSON.stringify({
+      ticketNumber: booking.ticketNumber,
+      bookingId: booking.id,
+    })
+  );
 
   const doc = new PDFDocument();
   const buffers = [];
@@ -287,8 +259,8 @@ const generateTicketPDF = async (bookingId) => {
     });
 
     doc.fontSize(20).text("BUS TICKET", { align: "center" });
-    doc.moveDown();
 
+    doc.moveDown();
     doc.fontSize(12).text(`Ticket: ${booking.ticketNumber}`);
     doc.text(`Passenger: ${booking.user.fullName}`);
     doc.text(`Bus: ${booking.bus.busNumber}`);
@@ -296,15 +268,17 @@ const generateTicketPDF = async (bookingId) => {
     doc.text(`Total: ${booking.totalPrice}`);
 
     doc.moveDown();
-    doc.image(qrCodeImage, { width: 150 });
+    doc.image(qrCode, { width: 150 });
 
     doc.end();
   });
 };
 
 
-// Confirm booking service
-const confirmBooking = async (bookingId)=>{
+// ==============================
+// CONFIRM BOOKING
+// ==============================
+const confirmBooking = async (bookingId) => {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
   });
@@ -317,7 +291,7 @@ const confirmBooking = async (bookingId)=>{
       status: "CONFIRMED",
     },
   });
-}
+};
 
 
 // ==============================
@@ -331,4 +305,5 @@ module.exports = {
   getMyBookings,
   deleteBooking,
   generateTicketPDF,
+  confirmBooking,
 };

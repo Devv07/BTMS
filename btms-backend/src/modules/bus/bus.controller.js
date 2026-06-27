@@ -7,6 +7,8 @@ const busService = require("./bus.service");
  * ======================
  */
 exports.createBus = asyncHandler(async (req, res) => {
+  console.log(req.body);
+
   const {
     busName,
     busNumber,
@@ -16,7 +18,8 @@ exports.createBus = asyncHandler(async (req, res) => {
     arrivalTime,
     totalSeats,
     price,
-    seatLayout,
+    type,
+    seatConfig,
   } = req.body;
 
   if (
@@ -27,7 +30,9 @@ exports.createBus = asyncHandler(async (req, res) => {
     !departureTime ||
     !arrivalTime ||
     !totalSeats ||
-    !price
+    !price ||
+    !type || 
+    !seatConfig
   ) {
     return res.status(400).json({
       success: false,
@@ -44,8 +49,8 @@ exports.createBus = asyncHandler(async (req, res) => {
     arrivalTime,
     totalSeats,
     price,
-    seatLayout: seatLayout || [],
-     // Default to empty array if not provided
+    type,
+    seatConfig,
   });
 
   res.status(201).json({
