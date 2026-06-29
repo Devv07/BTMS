@@ -13,19 +13,20 @@ exports.createBooking = asyncHandler(async (req, res) => {
   }
 
   const userId = req.user.id;
-  const { busId, seats } = req.body;
 
-  if (!busId || !seats) {
+  const { busId, seatNumbers } = req.body;
+
+  if (!busId || !Array.isArray(seatNumbers) || seatNumbers.length === 0) {
     return res.status(400).json({
       success: false,
-      message: "busId and seats are required",
+      message: "busId and seatNumbers are required",
     });
   }
 
   const booking = await bookingService.createBooking({
     userId,
     busId,
-    seats,
+    seatNumbers,
   });
 
   res.status(201).json({

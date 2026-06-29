@@ -27,7 +27,7 @@ app.use("/api/v1/buses", busRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/seats", seatRoutes);
 app.use("/api/v1/seat-locks", seatLockRoutes);
-app.use("/api/v1/payment", paymentRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // HEALTH CHECK
 app.get("/", (req, res) => {

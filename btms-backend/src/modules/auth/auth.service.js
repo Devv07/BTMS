@@ -34,15 +34,25 @@ const register = async (data) => {
 
 // LOGIN
 const login = async (data) => {
+  console.log("Login request:", data.email);
+
   const user = await prisma.user.findUnique({
     where: { email: data.email },
   });
 
-  if (!user) throw new Error("Invalid credentials");
+  console.log("Database user:", user);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
 
   const ok = await comparePassword(data.password, user.password);
 
-  if (!ok) throw new Error("Invalid credentials");
+  console.log("Password match:", ok);
+
+  if (!ok) {
+    throw new Error("Wrong password");
+  }
 
   return {
     user: {

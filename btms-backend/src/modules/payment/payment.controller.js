@@ -1,137 +1,108 @@
-const prisma = require("../../config/prisma");
+const asyncHandler = require("express-async-handler");
+
 const paymentService = require("./payment.service");
 
-// INITIATE PAYMENT
-const initiatePayment = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { busId, amount } = req.body;
+exports.createPayment = asyncHandler(async (req, res) => {
+  const { bookingId, paymentMethod, customer } = req.body;
 
-    const payment = await paymentService.initiatePayment({
-      userId,
-      busId,
-      amount,
-    });
+  const payment = await paymentService.createPayment({
+    bookingId,
+    paymentMethod,
+    customer,
+  });
 
-    res.status(200).json({
-      success: true,
-      message: "Payment initiated",
-      payment,
-    });
-  } catch (err) {
-    res.status(400).json({
+  res.status(201).json({
+    success: true,
+    message: "Payment created successfully",
+    data: payment,
+  });
+});
+
+// ======================================================
+// VERIFY PAYMENT
+// ======================================================
+
+exports.verifyPayment = asyncHandler(async (req, res) => {
+  const { paymentId } = req.body;
+
+  const result = await paymentService.verifyPayment({
+    paymentId,
+  });
+
+  res.json({
+    success: true,
+    message: "Payment verified successfully",
+    data: result,
+  });
+});
+
+// ======================================================
+// REFUND PAYMENT
+// ======================================================
+
+exports.refundPayment = asyncHandler(async (req, res) => {
+  const { paymentId } = req.body;
+
+  const result = await paymentService.refundPayment({
+    paymentId,
+  });
+
+  res.json({
+    success: true,
+    message: "Payment refunded successfully",
+    data: result,
+  });
+});
+
+// ======================================================
+// WEBHOOK
+// ======================================================
+
+exports.webhook = asyncHandler(async (req, res) => {
+  const { method } = req.params;
+
+  const result = await paymentService.handleWebhook(
+    method,
+    req.body
+  );
+
+  res.json({
+    success: true,
+    message: "Webhook received successfully",
+    data: result,
+  });
+});
+
+// ======================================================
+// GET ALL PAYMENTS
+// ======================================================
+
+exports.getPayments = asyncHandler(async (req, res) => {
+  const payments = await paymentService.getPayments();
+
+  res.json({
+    success: true,
+    count: payments.length,
+    data: payments,
+  });
+});
+
+// ======================================================
+// GET PAYMENT BY ID
+// ======================================================
+
+exports.getPayment = asyncHandler(async (req, res) => {
+  const payment = await paymentService.getPayment(req.params.id);
+
+  if (!payment) {
+    return res.status(404).json({
       success: false,
-      message: err.message,
+      message: "Payment not found",
     });
   }
-};
 
-// PAYMENT SUCCESS (WEBHOOK / CALLBACK)
-const paymentSuccess = async (req, res) => {
-  try {
-    const { paymentId, transactionId } = req.body;
-
-    // 1. update payment status
-    const payment = await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        status: "SUCCESS",
-        transactionId,
-      },
-    });
-
-    // 2. get active seat locks
-    const locks = await prisma.seatLock.findMany({
-      where: {
-        busId: payment.busId,
-        userId: payment.userId,
-        status: "ACTIVE",
-      },
-    });
-
-    const seatIds = locks.map((l) => l.seatId);
-
-    // 3. create booking
-    const booking = await prisma.booking.create({
-      data: {
-        userId: payment.userId,
-        busId: payment.busId,
-        seatIds,
-        amount: payment.amount,
-        status: "CONFIRMED",
-      },
-    });
-
-    // 4. update seat locks
-    await prisma.seatLock.updateMany({
-      where: {
-        busId: payment.busId,
-        userId: payment.userId,
-      },
-      data: {
-        status: "CONFIRMED",
-      },
-    });
-
-    // 5. update seats
-    await prisma.seat.updateMany({
-      where: { id: { in: seatIds } },
-      data: {
-        status: "BOOKED",
-      },
-    });
-    
-
-    res.status(200).json({
-      success: true,
-      message: "Payment successful, booking confirmed",
-      booking,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-// PAYMENT FAILED
-const paymentFailed = async (req, res) => {
-  try {
-    const { paymentId } = req.body;
-
-    const payment = await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        status: "FAILED",
-      },
-    });
-
-    // release seat locks
-    await prisma.seatLock.updateMany({
-      where: {
-        busId: payment.busId,
-        userId: payment.userId,
-      },
-      data: {
-        status: "EXPIRED",
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Payment failed, seats released",
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-module.exports = {
-  initiatePayment,
-  paymentSuccess,
-  paymentFailed,
-};
+  res.json({
+    success: true,
+    data: payment,
+  });
+});

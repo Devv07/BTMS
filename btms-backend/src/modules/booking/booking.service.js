@@ -3,11 +3,7 @@ const { generateTicketNumber } = require("../../utils/ticket");
 const QRCode = require("qrcode");
 const PDFDocument = require("pdfkit");
 
-
-// ==============================
-// CREATE BOOKING
-// ==============================
-const createBooking = async ({ userId, busId, seat }) => {
+const createBooking = async ({ userId, busId, seatNumbers }) => {
   return await prisma.$transaction(async (tx) => {
 
     // 1. Get bus
@@ -15,30 +11,36 @@ const createBooking = async ({ userId, busId, seat }) => {
       where: { id: busId },
     });
 
-    if (!bus) throw new Error("Bus not found");
+    if (!bus) {
+      throw new Error("Bus not found");
+    }
 
     // 2. Get seats
     const seats = await tx.seat.findMany({
       where: {
         busId,
-        seatNumber: { in: seat },
+        seatNumber: {
+          in: seatNumbers,
+        },
       },
     });
 
-    // 3. Validate seats exist
-    if (seats.length !== seat.length) {
+    // 3. Validate seats
+    if (seats.length !== seatNumbers.length) {
       throw new Error("Some seats do not exist");
     }
 
-    // 4. Check already booked / locked
-    const notAvailable = seats.filter(
-      (s) => s.status === "BOOKED" || s.status === "LOCKED"
+    // 4. Check unavailable seats
+    const unavailableSeats = seats.filter(
+      (seat) =>
+        seat.status === "BOOKED" ||
+        seat.status === "LOCKED"
     );
 
-    if (notAvailable.length > 0) {
+    if (unavailableSeats.length > 0) {
       throw new Error(
-        `Seats already booked: ${notAvailable
-          .map((s) => s.seatNumber)
+        `Seats already booked: ${unavailableSeats
+          .map((seat) => seat.seatNumber)
           .join(", ")}`
       );
     }
@@ -48,8 +50,12 @@ const createBooking = async ({ userId, busId, seat }) => {
       data: {
         userId,
         busId,
-        seats: seat.length,
-        totalPrice: seat.length * bus.price,
+
+        seatIds: seatNumbers,   // <-- ADD THIS
+
+        seats: seatNumbers.length,
+        amount: seatNumbers.length * bus.price,
+        totalPrice: seatNumbers.length * bus.price,
         ticketNumber: generateTicketNumber(),
       },
       include: {
@@ -58,11 +64,13 @@ const createBooking = async ({ userId, busId, seat }) => {
       },
     });
 
-    // 6. LOCK SEATS CORRECTLY
+    // 6. Book seats
     await tx.seat.updateMany({
       where: {
         busId,
-        seatNumber: { in: seat },
+        seatNumber: {
+          in: seatNumbers,
+        },
       },
       data: {
         status: "BOOKED",
@@ -70,27 +78,30 @@ const createBooking = async ({ userId, busId, seat }) => {
       },
     });
 
-    // 7. Update bus seats
+    // 7. Update available seats
     await tx.bus.update({
-      where: { id: busId },
+      where: {
+        id: busId,
+      },
       data: {
         availableSeats: {
-          decrement: seat.length,
+          decrement: seatNumbers.length,
         },
       },
     });
 
-    // 8. QR CODE
+    // 8. Generate QR Code
     const qrCode = await QRCode.toDataURL(
       JSON.stringify({
         bookingId: booking.id,
         ticketNumber: booking.ticketNumber,
-        seats: seat,
+        seatNumbers,
       })
     );
 
     return {
       ...booking,
+      seatNumbers,
       qrCode,
     };
   });

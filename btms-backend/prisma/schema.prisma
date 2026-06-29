@@ -13,12 +13,6 @@ enum Role {
   SUPER_ADMIN
 }
 
-enum SeatStatus {
-  AVAILABLE
-  LOCKED
-  BOOKED
-}
-
 model User {
   id        String   @id @default(uuid())
   fullName  String
@@ -30,7 +24,6 @@ model User {
 
   bookings  Booking[]
   seatLocks SeatLock[]
-  Payment   Payment[]
 }
 
 enum BusType {
@@ -45,27 +38,41 @@ enum BusType {
 
 model Bus {
   id             String   @id @default(cuid())
+
   busName        String
-  busNumber      String
+  busNumber      String   @unique
+
   fromLocation   String
   toLocation     String
+
   departureTime  DateTime
   arrivalTime    DateTime
+
   totalSeats     Int
   availableSeats Int
-  price          Int
-  type           String
 
-  seatConfig Json
-  seatLayout Json
+  price          Float
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  type           BusType
 
-  booking   Booking[]
-  seats     Seat[]
+  operatorName   String?
+
+  amenities      Json?
+
+  seatTemplate   String
+
+  seatConfig     Json
+
+  seatLayout     Json
+
+  status         String @default("ACTIVE")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bookings Booking[]
+  seats    Seat[]
   seatLocks SeatLock[]
-  Payment   Payment[]
 }
 
 enum BookingStatus {
@@ -79,7 +86,6 @@ model Booking {
   busId        String
   userId       String
   seatIds      Json
-  amount       Int
   seats        Int
   totalPrice   Int
   ticketNumber String
@@ -90,6 +96,13 @@ model Booking {
   user User @relation(fields: [userId], references: [id])
 
   seatSelections Seat[]
+  payment Payment?
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
 }
 
 model Seat {
@@ -125,18 +138,39 @@ model SeatLock {
   seat Seat @relation(fields: [seatId], references: [id])
   bus  Bus  @relation(fields: [busId], references: [id])
   user User @relation(fields: [userId], references: [id])
+
+  @@index([seatId])
+  @@index([busId])
+  @@index([userId])
+}
+
+enum PaymentStatus{
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod{
+  ESEWA
+  KHALTI
+  STRIPE
+  RAZORPAY
+  CASH
 }
 
 model Payment {
-  id     String @id @default(cuid())
-  userId String
-  busId  String
-  amount Int
+  id            String          @id @default(uuid())
+  bookingId     String          @unique
+  amount        Float
+  currency      String          @default("NPR")
+  method        PaymentMethod
+  status        PaymentStatus   @default(PENDING)
+  transactionId String?
+  gatewayRef    String?
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  status    String   @default("PENDING")
-  transactionId String?  @unique
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-  bus  Bus  @relation(fields: [busId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
 }

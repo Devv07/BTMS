@@ -1,11 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const busService = require("./bus.service");
 
-/**
- * ======================
- * CREATE BUS
- * ======================
- */
+// create bus
 exports.createBus = asyncHandler(async (req, res) => {
   console.log(req.body);
 
@@ -19,7 +15,10 @@ exports.createBus = asyncHandler(async (req, res) => {
     totalSeats,
     price,
     type,
-    seatConfig,
+
+    seatTemplate,
+    operatorName,
+    amenities,
   } = req.body;
 
   if (
@@ -32,7 +31,9 @@ exports.createBus = asyncHandler(async (req, res) => {
     !totalSeats ||
     !price ||
     !type || 
-    !seatConfig
+     !seatTemplate ||
+    !operatorName ||
+    !amenities
   ) {
     return res.status(400).json({
       success: false,
@@ -50,7 +51,10 @@ exports.createBus = asyncHandler(async (req, res) => {
     totalSeats,
     price,
     type,
-    seatConfig,
+    
+    seatTemplate,
+    operatorName,
+    amenities,
   });
 
   res.status(201).json({
