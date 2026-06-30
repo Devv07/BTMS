@@ -1,108 +1,90 @@
 const asyncHandler = require("express-async-handler");
-
 const paymentService = require("./payment.service");
 
+// ========================================
+// CREATE PAYMENT
+// ========================================
+
 exports.createPayment = asyncHandler(async (req, res) => {
-  const { bookingId, paymentMethod, customer } = req.body;
+  const result = await paymentService.createPayment(req.body);
 
-  const payment = await paymentService.createPayment({
-    bookingId,
-    paymentMethod,
-    customer,
-  });
-
-  res.status(201).json({
-    success: true,
-    message: "Payment created successfully",
-    data: payment,
-  });
+  res.status(201).json(result);
 });
 
-// ======================================================
+// ========================================
 // VERIFY PAYMENT
-// ======================================================
+// ========================================
 
 exports.verifyPayment = asyncHandler(async (req, res) => {
-  const { paymentId } = req.body;
+  const result = await paymentService.verifyPayment(req.body);
 
-  const result = await paymentService.verifyPayment({
-    paymentId,
-  });
-
-  res.json({
-    success: true,
-    message: "Payment verified successfully",
-    data: result,
-  });
+  res.json(result);
 });
 
-// ======================================================
+// ========================================
 // REFUND PAYMENT
-// ======================================================
+// ========================================
 
 exports.refundPayment = asyncHandler(async (req, res) => {
-  const { paymentId } = req.body;
+  const result = await paymentService.refundPayment(req.body);
 
-  const result = await paymentService.refundPayment({
-    paymentId,
-  });
-
-  res.json({
-    success: true,
-    message: "Payment refunded successfully",
-    data: result,
-  });
+  res.json(result);
 });
 
-// ======================================================
-// WEBHOOK
-// ======================================================
-
-exports.webhook = asyncHandler(async (req, res) => {
-  const { method } = req.params;
-
-  const result = await paymentService.handleWebhook(
-    method,
-    req.body
-  );
-
-  res.json({
-    success: true,
-    message: "Webhook received successfully",
-    data: result,
-  });
-});
-
-// ======================================================
+// ========================================
 // GET ALL PAYMENTS
-// ======================================================
+// ========================================
 
 exports.getPayments = asyncHandler(async (req, res) => {
   const payments = await paymentService.getPayments();
 
   res.json({
     success: true,
-    count: payments.length,
     data: payments,
   });
 });
 
-// ======================================================
-// GET PAYMENT BY ID
-// ======================================================
+// ========================================
+// GET PAYMENT
+// ========================================
 
 exports.getPayment = asyncHandler(async (req, res) => {
   const payment = await paymentService.getPayment(req.params.id);
 
-  if (!payment) {
-    return res.status(404).json({
-      success: false,
-      message: "Payment not found",
-    });
-  }
-
   res.json({
     success: true,
     data: payment,
+  });
+});
+
+// ========================================
+// ESEWA SUCCESS CALLBACK
+// ========================================
+
+exports.esewaSuccess = asyncHandler(async (req, res) => {
+  const { oid } = req.query;
+
+  if (!oid) {
+    return res.status(400).json({
+      success: false,
+      message: "Transaction id missing",
+    });
+  }
+
+  const result = await paymentService.verifyPayment({
+    paymentId: oid,
+  });
+
+  res.json(result);
+});
+
+// ========================================
+// ESEWA FAILURE CALLBACK
+// ========================================
+
+exports.esewaFailure = asyncHandler(async (req, res) => {
+  res.status(400).json({
+    success: false,
+    message: "Payment cancelled or failed.",
   });
 });

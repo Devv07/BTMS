@@ -1,13 +1,10 @@
 const prisma = require("../../config/prisma");
-
 const PaymentFactory = require("./factory/paymentFactory");
-
 const PaymentStatus = require("./constants/paymentStatus");
+const notificationService = require("../notification/notification.service");
+const bookingService = require("../booking/booking.service");
 
-// ======================================================
-// CREATE PAYMENT
-// ======================================================
-
+// create payment
 const createPayment = async ({
   bookingId,
   paymentMethod,
@@ -89,56 +86,67 @@ const createPayment = async ({
         id: payment.id,
       },
       data: {
-        transactionId: result.transactionId || null,
-        gatewayRef: result.gatewayReference || null,
+        transactionId:
+          gatewayResponse.transactionId || null,
+
+        gatewayRef:
+          gatewayResponse.gatewayReference || null,
+
+        status:
+          gatewayResponse.status || PaymentStatus.PENDING,
       },
     });
 
     return {
       success: true,
+
       paymentId: payment.id,
 
-      transactionId:gatewayResponse.transactionId,
-      gatewayRef:gatewayResponse.gatewayReference,
+      method: paymentMethod,
+
+      status: gatewayResponse.status,
+
+      transactionId: gatewayResponse.transactionId,
+
+      gatewayRef: gatewayResponse.gatewayReference,
+
+      redirectUrl: gatewayResponse.redirectUrl || null,
+
+      formData: gatewayResponse.formData || null,
     };
   });
 };
 
-// ======================================================
-// VERIFY PAYMENT
-// ======================================================
-
-const verifyPayment = async ({
-  paymentId,
-}) => {
-  const payment =
-    await prisma.payment.findUnique({
-      where: {
-        id: paymentId,
-      },
-      include: {
-        booking: true,
-      },
-    });
+// verify payment
+const verifyPayment = async ({ paymentId }) => {
+  // find payment
+  const payment = await prisma.payment.findUnique({
+    where: {
+      id: paymentId,
+    },
+    include: {
+      booking: true,
+    },
+  });
 
   if (!payment) {
     throw new Error("Payment not found");
   }
 
-  const gateway =
-    PaymentFactory.create(
-      payment.method,
-      payment
-    );
+  // verify with gateway
+  const gateway = PaymentFactory.create(
+    payment.method,
+    payment
+  );
 
-  const result =
-    await gateway.verifyPayment(payment);
+  const result = await gateway.verifyPayment(payment);
 
   if (!result.success) {
     return result;
   }
 
-  await prisma.$transaction(async (tx) => {
+  // update payment & booking
+  const updatedBooking = await prisma.$transaction(async (tx) => {
     await tx.payment.update({
       where: {
         id: payment.id,
@@ -148,19 +156,68 @@ const verifyPayment = async ({
       },
     });
 
-    await tx.booking.update({
+    return await tx.booking.update({
       where: {
         id: payment.bookingId,
       },
       data: {
         status: "CONFIRMED",
       },
+      include: {
+        user: true,
+        bus: true,
+      },
     });
   });
 
+  // generate pdf
+  const pdfBuffer = await bookingService.generateTicketPDF(
+    updatedBooking.id
+  );
+
+  // send booking confirmation email
+  await notificationService.sendBookingConfirmation({
+    email: updatedBooking.user.email,
+    passengerName: updatedBooking.user.fullName,
+    ticketNumber: updatedBooking.ticketNumber,
+    busName: updatedBooking.bus.busName,
+    busNumber: updatedBooking.bus.busNumber,
+    fromLocation: updatedBooking.bus.fromLocation,
+    toLocation: updatedBooking.bus.toLocation,
+    departureTime: new Date(
+      updatedBooking.bus.departureTime
+    ).toLocaleString(),
+    arrivalTime: new Date(
+      updatedBooking.bus.arrivalTime
+    ).toLocaleString(),
+    seatNumbers: Array.isArray(updatedBooking.seatIds)
+      ? updatedBooking.seatIds
+      : [],
+    totalAmount: updatedBooking.totalPrice,
+    pdfBuffer,
+  });
+
+  // get payment details
+  const paymentDetails = await prisma.payment.findUnique({
+    where: {
+      id: payment.id,
+    },
+    include: {
+      booking: {
+        include: {
+          user: true,
+          bus: true,
+        },
+      },
+    },
+  });
+
+  // send payment success email
+  await notificationService.sendPaymentSuccess(paymentDetails);
+
   return {
     success: true,
-    message: "Payment verified",
+    message: "Payment verified successfully",
   };
 };
 

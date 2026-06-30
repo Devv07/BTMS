@@ -7,32 +7,17 @@ const paymentController = require("./payment.controller");
 const authMiddleware = require("../../middleware/auth.middleware");
 const roleMiddleware = require("../../middleware/role.middleware");
 
-// ======================================================
-// CREATE PAYMENT
-// POST /api/payments
-// ======================================================
-
 router.post(
   "/",
   authMiddleware,
   paymentController.createPayment
 );
 
-// ======================================================
-// VERIFY PAYMENT
-// POST /api/payments/verify
-// ======================================================
-
 router.post(
   "/verify",
   authMiddleware,
   paymentController.verifyPayment
 );
-
-// ======================================================
-// REFUND PAYMENT
-// POST /api/payments/refund
-// ======================================================
 
 router.post(
   "/refund",
@@ -41,20 +26,15 @@ router.post(
   paymentController.refundPayment
 );
 
-// ======================================================
-// PAYMENT WEBHOOK
-// POST /api/payments/webhook/:method
-// ======================================================
-
-router.post(
-  "/webhook/:method",
-  paymentController.webhook
+router.get(
+  "/esewa/success",
+  paymentController.esewaSuccess
 );
 
-// ======================================================
-// GET ALL PAYMENTS
-// GET /api/payments
-// ======================================================
+router.get(
+  "/esewa/failure",
+  paymentController.esewaFailure
+);
 
 router.get(
   "/",
@@ -62,11 +42,6 @@ router.get(
   roleMiddleware("ADMIN", "SUPER_ADMIN"),
   paymentController.getPayments
 );
-
-// ======================================================
-// GET PAYMENT BY ID
-// GET /api/payments/:id
-// ======================================================
 
 router.get(
   "/:id",

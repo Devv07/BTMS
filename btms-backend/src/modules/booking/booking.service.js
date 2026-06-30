@@ -2,6 +2,7 @@ const prisma = require("../../config/prisma");
 const { generateTicketNumber } = require("../../utils/ticket");
 const QRCode = require("qrcode");
 const PDFDocument = require("pdfkit");
+const notificationService = require("../notification/notification.service");
 
 const createBooking = async ({ userId, busId, seatNumbers }) => {
   return await prisma.$transaction(async (tx) => {
@@ -192,13 +193,18 @@ const getMyBookings = async (userId) => {
 // CANCEL BOOKING (FIXED)
 // ==============================
 const deleteBooking = async (bookingId, userId, role) => {
-  return await prisma.$transaction(async (tx) => {
-
+  const booking = await prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
+      include: {
+        user: true,
+        bus: true,
+      },
     });
 
-    if (!booking) throw new Error("Booking not found");
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
 
     if (role === "USER" && booking.userId !== userId) {
       throw new Error("Not authorized");
@@ -208,18 +214,22 @@ const deleteBooking = async (bookingId, userId, role) => {
       throw new Error("Cannot cancel confirmed booking");
     }
 
-    // 1. Free seats
+    // Release seats
     await tx.seat.updateMany({
-      where: { bookingId },
+      where: {
+        bookingId,
+      },
       data: {
         status: "AVAILABLE",
         bookingId: null,
       },
     });
 
-    // 2. Restore seats in bus
+    // Restore available seats
     await tx.bus.update({
-      where: { id: booking.busId },
+      where: {
+        id: booking.busId,
+      },
       data: {
         availableSeats: {
           increment: booking.seats,
@@ -227,20 +237,30 @@ const deleteBooking = async (bookingId, userId, role) => {
       },
     });
 
-    // 3. Cancel booking (FIXED)
-    return tx.booking.update({
-      where: { id: bookingId },
+    // Cancel booking
+    const updatedBooking = await tx.booking.update({
+      where: {
+        id: bookingId,
+      },
       data: {
         status: "CANCELLED",
       },
+      include: {
+        user: true,
+        bus: true,
+      },
     });
+
+    return updatedBooking;
   });
+
+  // Send cancellation email
+  await notificationService.sendBookingCancelled(booking);
+
+  return booking;
 };
 
-
-// ==============================
-// PDF TICKET
-// ==============================
+// pdf ticket
 const generateTicketPDF = async (bookingId) => {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
