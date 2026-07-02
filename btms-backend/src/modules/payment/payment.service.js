@@ -170,6 +170,20 @@ const verifyPayment = async ({ paymentId }) => {
     });
   });
 
+  // increment coupon usage
+  if (updatedBooking.couponId) {
+    await prisma.coupon.update({
+      where: {
+        id: updatedBooking.couponId,
+      },
+      data: {
+        usedCount: {
+          increment: 1,
+        },
+      },
+    });
+  }
+
   // generate pdf
   const pdfBuffer = await bookingService.generateTicketPDF(
     updatedBooking.id

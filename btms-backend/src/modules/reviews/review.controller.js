@@ -177,3 +177,82 @@ exports.getRatingStatistics =
       data: statistics,
     });
   });
+
+// hide review
+exports.hideReview = asyncHandler(async (req, res) => {
+  const review = await reviewService.hideReview(
+    req.params.id
+  );
+
+  res.json({
+    success: true,
+    message: "Review hidden successfully",
+    data: review,
+  });
+});
+
+// publish review
+exports.publishReview = asyncHandler(async (req, res) => {
+  const review = await reviewService.publishReview(
+    req.params.id
+  );
+
+  res.json({
+    success: true,
+    message: "Review published successfully",
+    data: review,
+  });
+});
+
+// report review
+exports.reportReview = asyncHandler(async (req, res) => {
+  const review = await reviewService.reportReview(
+    req.params.id
+  );
+
+  res.json({
+    success: true,
+    message: "Review reported successfully",
+    data: review,
+  });
+});
+
+// soft delete review
+exports.softDeleteReview = asyncHandler(async (req, res) => {
+  const review =
+    await reviewService.softDeleteReview(
+      req.params.id
+    );
+
+  res.json({
+    success: true,
+    message: "Review deleted successfully",
+    data: review,
+  });
+});
+
+// restore review
+exports.restoreReview = asyncHandler(async (req, res) => {
+  const review =
+    await reviewService.restoreReview(
+      req.params.id
+    );
+
+  res.json({
+    success: true,
+    message: "Review restored successfully",
+    data: review,
+  });
+});
+
+// dashboard statistics
+exports.getDashboardStatistics =
+  asyncHandler(async (req, res) => {
+    const statistics =
+      await reviewService.getDashboardStatistics();
+
+    res.json({
+      success: true,
+      data: statistics,
+    });
+  });

@@ -12,6 +12,12 @@ const createBookingSchema = z.object({
     })
     .int("Seats must be integer")
     .positive("Seats must be greater than 0"),
+
+  couponCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .optional(),
 });
 
 module.exports = {

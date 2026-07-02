@@ -414,6 +414,123 @@ const getRatingStatistics = async () => {
   return generateReviewSummary(reviews);
 };
 
+
+// hide review
+const hideReview = async (reviewId) => {
+  return prisma.review.update({
+    where: {
+      id: reviewId,
+    },
+    data: {
+      status: "HIDDEN",
+    },
+  });
+};
+
+// publish review
+const publishReview = async (reviewId) => {
+  return prisma.review.update({
+    where: {
+      id: reviewId,
+    },
+    data: {
+      status: "PUBLISHED",
+    },
+  });
+};
+
+// report review
+const reportReview = async (reviewId) => {
+  return prisma.review.update({
+    where: {
+      id: reviewId,
+    },
+    data: {
+      status: "REPORTED",
+    },
+  });
+};
+
+// soft delete review
+const softDeleteReview = async (reviewId) => {
+  return prisma.review.update({
+    where: {
+      id: reviewId,
+    },
+    data: {
+      isDeleted: true,
+    },
+  });
+};
+
+// restore review
+const restoreReview = async (reviewId) => {
+  return prisma.review.update({
+    where: {
+      id: reviewId,
+    },
+    data: {
+      isDeleted: false,
+    },
+  });
+};
+
+// dashboard statistics
+const getDashboardStatistics = async () => {
+  const [
+    totalReviews,
+    published,
+    hidden,
+    reported,
+    deleted,
+    reviews,
+  ] = await Promise.all([
+    prisma.review.count(),
+
+    prisma.review.count({
+      where: {
+        status: "PUBLISHED",
+      },
+    }),
+
+    prisma.review.count({
+      where: {
+        status: "HIDDEN",
+      },
+    }),
+
+    prisma.review.count({
+      where: {
+        status: "REPORTED",
+      },
+    }),
+
+    prisma.review.count({
+      where: {
+        isDeleted: true,
+      },
+    }),
+
+    prisma.review.findMany({
+      where: {
+        isDeleted: false,
+      },
+    }),
+  ]);
+
+  return {
+    totalReviews,
+    published,
+    hidden,
+    reported,
+    deleted,
+    averageRating:
+      generateReviewSummary(reviews).averageRating,
+  };
+};
+
+
+
 module.exports = {
   createReview,
   updateReview,
@@ -427,5 +544,10 @@ module.exports = {
   getLowestRatedBuses,
   getRecentReviews,
   getRatingStatistics,
-
+  hideReview,
+  publishReview,
+  reportReview,
+  softDeleteReview,
+  restoreReview,
+  getDashboardStatistics,
 };

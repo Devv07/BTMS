@@ -14,6 +14,7 @@ const startSeatLockCleaner = require("./jobs/seatLockerJob");
 const notificationRoutes = require("./modules/notification/notification.route");
 const reportRoutes = require("./modules/reports/report.route");
 const reviewRoutes = require("./modules/reviews/review.route");
+const couponRoutes = require("./modules/coupons/coupon.route");
 
 
 const app = express();
@@ -26,15 +27,17 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ROUTES
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/buses", busRoutes);
-app.use("/api/v1/bookings", bookingRoutes);
-app.use("/api/v1/seats", seatRoutes);
-app.use("/api/v1/seat-locks", seatLockRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/buses", busRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/seats", seatRoutes);
+app.use("/api/seat-locks", seatLockRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/coupons", couponRoutes);
+
 
 // HEALTH CHECK
 app.get("/", (req, res) => {

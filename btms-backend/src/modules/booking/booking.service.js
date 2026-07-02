@@ -4,12 +4,18 @@ const QRCode = require("qrcode");
 const PDFDocument = require("pdfkit");
 const notificationService = require("../notification/notification.service");
 
-const createBooking = async ({ userId, busId, seatNumbers }) => {
+const createBooking = async ({
+  userId,
+  busId,
+  seatNumbers,
+  couponCode,
+}) => {
   return await prisma.$transaction(async (tx) => {
-
     // 1. Get bus
     const bus = await tx.bus.findUnique({
-      where: { id: busId },
+      where: {
+        id: busId,
+      },
     });
 
     if (!bus) {
@@ -46,26 +52,138 @@ const createBooking = async ({ userId, busId, seatNumbers }) => {
       );
     }
 
-    // 5. Create booking
-    const booking = await tx.booking.create({
-      data: {
-        userId,
-        busId,
+    // 5. Calculate amount
+    const amount =
+      seatNumbers.length * bus.price;
 
-        seatIds: seatNumbers,   // <-- ADD THIS
+    let totalPrice = amount;
 
-        seats: seatNumbers.length,
-        amount: seatNumbers.length * bus.price,
-        totalPrice: seatNumbers.length * bus.price,
-        ticketNumber: generateTicketNumber(),
-      },
-      include: {
-        bus: true,
-        user: true,
-      },
-    });
+    let coupon = null;
+    let couponDiscount = 0;
 
-    // 6. Book seats
+    // 6. Apply coupon
+    if (couponCode) {
+      coupon = await tx.coupon.findUnique({
+        where: {
+          code: couponCode.toUpperCase(),
+        },
+      });
+
+      if (!coupon) {
+        throw new Error("Invalid coupon");
+      }
+
+      if (coupon.status !== "ACTIVE") {
+        throw new Error("Coupon is inactive");
+      }
+
+      const now = new Date();
+
+      if (
+        coupon.startDate > now ||
+        coupon.expiryDate < now
+      ) {
+        throw new Error("Coupon has expired");
+      }
+
+      if (
+        coupon.minimumAmount &&
+        amount < coupon.minimumAmount
+      ) {
+        throw new Error(
+          `Minimum booking amount is NPR ${coupon.minimumAmount}`
+        );
+      }
+
+      if (
+        coupon.maxUses &&
+        coupon.usedCount >=
+          coupon.maxUses
+      ) {
+        throw new Error(
+          "Coupon usage limit exceeded"
+        );
+      }
+
+      const previousUsage =
+        await tx.booking.count({
+          where: {
+            userId,
+            couponId: coupon.id,
+          },
+        });
+
+      if (
+        previousUsage >=
+        coupon.perUserLimit
+      ) {
+        throw new Error(
+          "Coupon usage limit reached"
+        );
+      }
+
+      if (
+        coupon.discountType ===
+        "PERCENTAGE"
+      ) {
+        couponDiscount =
+          (amount *
+            coupon.discountValue) /
+          100;
+
+        if (
+          coupon.maximumDiscount &&
+          couponDiscount >
+            coupon.maximumDiscount
+        ) {
+          couponDiscount =
+            coupon.maximumDiscount;
+        }
+      } else {
+        couponDiscount =
+          coupon.discountValue;
+      }
+
+      totalPrice =
+        amount - couponDiscount;
+
+      if (totalPrice < 0) {
+        totalPrice = 0;
+      }
+    }
+
+    // 7. Create booking
+    const booking =
+      await tx.booking.create({
+        data: {
+          userId,
+          busId,
+
+          seatIds: seatNumbers,
+
+          seats: seatNumbers.length,
+
+          amount,
+
+          couponId: coupon
+            ? coupon.id
+            : null,
+
+          couponDiscount,
+
+          totalPrice,
+
+          ticketNumber:
+            generateTicketNumber(),
+        },
+        include: {
+          bus: true,
+          user: true,
+          coupon: true,
+        },
+      });
+
+    // 8. Book seats
     await tx.seat.updateMany({
       where: {
         busId,
@@ -79,35 +197,45 @@ const createBooking = async ({ userId, busId, seatNumbers }) => {
       },
     });
 
-    // 7. Update available seats
+    // 9. Update available seats
     await tx.bus.update({
       where: {
         id: busId,
       },
       data: {
         availableSeats: {
-          decrement: seatNumbers.length,
+          decrement:
+            seatNumbers.length,
         },
       },
     });
 
-    // 8. Generate QR Code
-    const qrCode = await QRCode.toDataURL(
-      JSON.stringify({
-        bookingId: booking.id,
-        ticketNumber: booking.ticketNumber,
-        seatNumbers,
-      })
-    );
+    // 10. Generate QR
+    const qrCode =
+      await QRCode.toDataURL(
+        JSON.stringify({
+          bookingId:
+            booking.id,
+          ticketNumber:
+            booking.ticketNumber,
+          seatNumbers,
+        })
+      );
 
     return {
       ...booking,
       seatNumbers,
       qrCode,
+      coupon: coupon
+        ? {
+            code: coupon.code,
+            discount:
+              couponDiscount,
+          }
+        : null,
     };
   });
 };
-
 
 // ==============================
 // GET ALL BOOKINGS

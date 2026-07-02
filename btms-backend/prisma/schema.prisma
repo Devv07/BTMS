@@ -87,15 +87,18 @@ model Booking {
   id           String   @id @default(uuid())
   busId        String
   userId       String
+  couponId   String?
+  couponDiscount  Float   @default(0)
   seatIds      Json
   seats        Int
-  totalPrice   Int
+  totalPrice   Float
   ticketNumber String
   status       String   @default("CONFIRMED")
   createdAt    DateTime @default(now())
 
   bus  Bus  @relation(fields: [busId], references: [id])
   user User @relation(fields: [userId], references: [id])
+  coupon Coupon? @relation(fields: [couponId], references: [id])
 
   seatSelections Seat[]
   payment Payment?
@@ -206,4 +209,43 @@ enum ReviewStatus {
   PUBLISHED
   HIDDEN
   REPORTED
+}
+
+model Coupon {
+  id              String   @id @default(uuid())
+
+  code            String   @unique
+  description     String?
+
+  discountType    DiscountType
+  discountValue   Float
+
+  minimumAmount   Float?
+  maximumDiscount Float?
+
+  maxUses         Int?
+  usedCount       Int @default(0)
+
+  perUserLimit    Int @default(1)
+
+  status          CouponStatus @default(ACTIVE)
+
+  startDate       DateTime
+  expiryDate      DateTime
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  Bookings        Booking[]
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FLAT
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
 }
