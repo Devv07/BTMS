@@ -15,6 +15,8 @@ const notificationRoutes = require("./modules/notification/notification.route");
 const reportRoutes = require("./modules/reports/report.route");
 const reviewRoutes = require("./modules/reviews/review.route");
 const couponRoutes = require("./modules/coupons/coupon.route");
+const refundRoutes = require("./modules/refund/refund.route");
+const dashboardRoutes = require("./modules/dashboard/dashboard.route");
 
 
 const app = express();
@@ -37,6 +39,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/coupons", couponRoutes);
+app.use("/api/refunds", refundRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 
 // HEALTH CHECK

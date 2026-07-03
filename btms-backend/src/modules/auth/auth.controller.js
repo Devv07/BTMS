@@ -25,3 +25,60 @@ exports.login = asyncHandler(async (req, res) => {
     data: result,
   });
 });
+
+exports.getProfile = asyncHandler(async (req, res) => {
+  const user = await authService.getProfile(req.user.id);
+
+  res.json({
+    success: true,
+    data: user,
+  });
+});
+
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const user = await authService.updateProfile(
+    req.user.id,
+    req.body
+  );
+
+  res.json({
+    success: true,
+    message: "Profile updated successfully",
+    data: user,
+  });
+});
+
+exports.changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  await authService.changePassword(
+    req.user.id,
+    currentPassword,
+    newPassword
+  );
+
+  res.json({
+    success: true,
+    message: "Password changed successfully",
+  });
+});
+
+
+exports.forgotPassword = asyncHandler(async (req, res) => {
+  await authService.forgotPassword(req.body.email);
+
+  res.json({
+    success: true,
+    message:
+      "If the email exists, a password reset link has been sent.",
+  });
+});
+
+exports.resetPassword = asyncHandler(async (req, res) => {
+  await authService.resetPassword(req.body);
+
+  res.json({
+    success: true,
+    message: "Password reset successfully",
+  });
+});

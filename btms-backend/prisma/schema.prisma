@@ -22,6 +22,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+
   bookings  Booking[]
   seatLocks SeatLock[]
   reviews   Review[]
@@ -38,41 +41,41 @@ enum BusType {
 }
 
 model Bus {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  busName        String
-  busNumber      String   @unique
+  busName   String
+  busNumber String @unique
 
-  fromLocation   String
-  toLocation     String
+  fromLocation String
+  toLocation   String
 
-  departureTime  DateTime
-  arrivalTime    DateTime
+  departureTime DateTime
+  arrivalTime   DateTime
 
   totalSeats     Int
   availableSeats Int
 
-  price          Float
+  price Float
 
-  type           BusType
+  type BusType
 
-  operatorName   String?
+  operatorName String?
 
-  amenities      Json?
+  amenities Json?
 
-  seatTemplate   String
+  seatTemplate String
 
-  seatConfig     Json
+  seatConfig Json
 
-  seatLayout     Json
+  seatLayout Json
 
-  status         String @default("ACTIVE")
+  status String @default("ACTIVE")
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  bookings Booking[]
-  seats    Seat[]
+  bookings  Booking[]
+  seats     Seat[]
   seatLocks SeatLock[]
   reviews   Review[]
 }
@@ -84,25 +87,26 @@ enum BookingStatus {
 }
 
 model Booking {
-  id           String   @id @default(uuid())
-  busId        String
-  userId       String
-  couponId   String?
-  couponDiscount  Float   @default(0)
-  seatIds      Json
-  seats        Int
-  totalPrice   Float
-  ticketNumber String
-  status       String   @default("CONFIRMED")
-  createdAt    DateTime @default(now())
+  id             String   @id @default(uuid())
+  busId          String
+  userId         String
+  couponId       String?
+  couponDiscount Float    @default(0)
+  seatIds        Json
+  seats          Int
+  totalPrice     Float
+  ticketNumber   String
+  status         String   @default("CONFIRMED")
+  createdAt      DateTime @default(now())
 
-  bus  Bus  @relation(fields: [busId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  bus    Bus     @relation(fields: [busId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
   coupon Coupon? @relation(fields: [couponId], references: [id])
 
   seatSelections Seat[]
-  payment Payment?
-  review  Review?
+  payment        Payment?
+  review         Review?
+  Refund         Refund[]
 }
 
 enum SeatStatus {
@@ -150,14 +154,14 @@ model SeatLock {
   @@index([userId])
 }
 
-enum PaymentStatus{
+enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
   REFUNDED
 }
 
-enum PaymentMethod{
+enum PaymentMethod {
   ESEWA
   KHALTI
   STRIPE
@@ -166,40 +170,41 @@ enum PaymentMethod{
 }
 
 model Payment {
-  id            String          @id @default(uuid())
-  bookingId     String          @unique
+  id            String        @id @default(uuid())
+  bookingId     String        @unique
   amount        Float
-  currency      String          @default("NPR")
+  currency      String        @default("NPR")
   method        PaymentMethod
-  status        PaymentStatus   @default(PENDING)
+  status        PaymentStatus @default(PENDING)
   transactionId String?
   gatewayRef    String?
   paidAt        DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  booking Booking @relation(fields: [bookingId], references: [id])
+  booking Booking  @relation(fields: [bookingId], references: [id])
+  Refund  Refund[]
 }
 
 model Review {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  userId      String
-  busId       String
-  bookingId   String   @unique
+  userId    String
+  busId     String
+  bookingId String @unique
 
-  rating      Int
-  comment     String?
+  rating  Int
+  comment String?
 
-  status      ReviewStatus @default(PUBLISHED)
-  isDeleted   Boolean      @default(false)
+  status    ReviewStatus @default(PUBLISHED)
+  isDeleted Boolean      @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user         User    @relation(fields: [userId], references: [id])
-  bus          Bus     @relation(fields: [busId], references: [id])
-  booking      Booking @relation(fields: [bookingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  bus     Bus     @relation(fields: [busId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
 
   @@index([busId])
   @@index([userId])
@@ -212,31 +217,31 @@ enum ReviewStatus {
 }
 
 model Coupon {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  code            String   @unique
-  description     String?
+  code        String  @unique
+  description String?
 
-  discountType    DiscountType
-  discountValue   Float
+  discountType  DiscountType
+  discountValue Float
 
   minimumAmount   Float?
   maximumDiscount Float?
 
-  maxUses         Int?
-  usedCount       Int @default(0)
+  maxUses   Int?
+  usedCount Int  @default(0)
 
-  perUserLimit    Int @default(1)
+  perUserLimit Int @default(1)
 
-  status          CouponStatus @default(ACTIVE)
+  status CouponStatus @default(ACTIVE)
 
-  startDate       DateTime
-  expiryDate      DateTime
+  startDate  DateTime
+  expiryDate DateTime
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  Bookings        Booking[]
+  Bookings Booking[]
 }
 
 enum DiscountType {
@@ -248,4 +253,27 @@ enum CouponStatus {
   ACTIVE
   INACTIVE
   EXPIRED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Refund {
+  id        String       @id @default(cuid())
+  bookingId String
+  paymentId String
+  amount    Float
+  reason    String
+  status    RefundStatus @default(PENDING)
+
+  adminRemark String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id])
 }

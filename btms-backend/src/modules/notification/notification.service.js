@@ -145,6 +145,54 @@ const sendPushNotification = async ({
   });
 };
 
+const sendRefundApproved = async (refund) => {
+  return sendEmail({
+    to: refund.booking.user.email,
+    subject: "Refund Approved",
+    html: `
+      <h2>Refund Approved</h2>
+
+      <p>Hello ${refund.booking.user.fullName},</p>
+
+      <p>Your refund request has been approved.</p>
+
+      <p><strong>Refund Amount:</strong> Rs. ${refund.amount}</p>
+
+      <p><strong>Booking:</strong> ${refund.booking.ticketNumber}</p>
+
+      <p><strong>Remark:</strong> ${
+        refund.adminRemark || "N/A"
+      }</p>
+
+      <br>
+
+      <p>Thank you.</p>
+    `,
+  });
+};
+
+const sendRefundRejected = async (refund) => {
+  return sendEmail({
+    to: refund.booking.user.email,
+    subject: "Refund Rejected",
+    html: `
+      <h2>Refund Rejected</h2>
+
+      <p>Hello ${refund.booking.user.fullName},</p>
+
+      <p>Your refund request has been rejected.</p>
+
+      <p><strong>Remark:</strong> ${
+        refund.adminRemark || "N/A"
+      }</p>
+
+      <br>
+
+      <p>If you believe this is incorrect, please contact support.</p>
+    `,
+  });
+};
+
 module.exports = {
   sendBookingConfirmation,
   sendBookingCancellation,
@@ -155,4 +203,6 @@ module.exports = {
   sendPasswordReset,
   sendSMSNotification,
   sendPushNotification,
+  sendRefundApproved,
+  sendRefundRejected,
 };

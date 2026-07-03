@@ -125,9 +125,28 @@ const getPaymentReport = async () => {
   });
 };
 
+// refund report
+const getRefundReport = async () => {
+  return prisma.refund.findMany({
+    include: {
+      booking: {
+        include: {
+          user: true,
+          bus: true,
+        },
+      },
+      payment: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
 module.exports = {
   getDashboardReport,
   getRevenueReport,
   getBookingReport,
   getPaymentReport,
+  getRefundReport,
 };
