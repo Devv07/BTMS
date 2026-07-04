@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const busController = require("./bus.controller");
-const auth = require("../../middleware/auth.middleware");
-const authorize = require("../../middleware/role.middleware");
+const auth = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 /**
  * =========================

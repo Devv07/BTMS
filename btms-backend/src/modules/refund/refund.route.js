@@ -4,8 +4,8 @@ const router = express.Router();
 
 const refundController = require("./refund.controller");
 
-const authMiddleware = require("../../middleware/auth.middleware");
-const roleMiddleware = require("../../middleware/role.middleware");
+const authMiddleware = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 // request refund
 router.post(
@@ -18,7 +18,7 @@ router.post(
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   refundController.getRefunds
 );
 
@@ -40,7 +40,7 @@ router.get(
 router.get(
   "/user/:userId",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   refundController.getRefundsByUser
 );
 
@@ -48,14 +48,14 @@ router.get(
 router.patch(
   "/:id/status",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   refundController.updateRefundStatus
 );
 
 router.get(
   "/analytics",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   refundController.getRefundAnalytics
 );
 

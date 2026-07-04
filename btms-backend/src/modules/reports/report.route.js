@@ -4,8 +4,8 @@ const router = express.Router();
 
 const reportController = require("./report.controller");
 
-const authMiddleware = require("../../middleware/auth.middleware");
-const roleMiddleware = require("../../middleware/role.middleware");
+const authMiddleware = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 const dashboardController = require("./dashboard/dashboard.controller");
 
 // ========================================
@@ -16,7 +16,7 @@ const dashboardController = require("./dashboard/dashboard.controller");
 router.get(
   "/dashboard",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   reportController.dashboard
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.get(
   "/revenue",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   reportController.revenue
 );
 
@@ -40,7 +40,7 @@ router.get(
 router.get(
   "/bookings",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   reportController.bookings
 );
 
@@ -52,13 +52,13 @@ router.get(
 router.get(
   "/payments",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   reportController.payments
 );// dashboard summary
 router.get(
   "/dashboard/summary",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.summary
 );
 
@@ -66,7 +66,7 @@ router.get(
 router.get(
   "/dashboard/bookings",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.bookings
 );
 
@@ -74,7 +74,7 @@ router.get(
 router.get(
   "/dashboard/payments",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.payments
 );
 
@@ -82,7 +82,7 @@ router.get(
 router.get(
   "/dashboard/revenue",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.revenue
 );
 
@@ -90,7 +90,7 @@ router.get(
 router.get(
   "/dashboard/buses",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.popularBuses
 );
 
@@ -98,7 +98,7 @@ router.get(
 router.get(
   "/dashboard/monthly-revenue",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.monthlyRevenue
 );
 
@@ -106,7 +106,7 @@ router.get(
 router.get(
   "/dashboard/monthly-bookings",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.monthlyBookings
 );
 
@@ -114,7 +114,7 @@ router.get(
 router.get(
   "/dashboard/seat-occupancy",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.seatOccupancy
 );
 
@@ -122,7 +122,7 @@ router.get(
 router.get(
   "/dashboard/popular-routes",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.popularRoutes
 );
 
@@ -130,7 +130,7 @@ router.get(
 router.get(
   "/dashboard/payment-methods",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.paymentMethods
 );
 

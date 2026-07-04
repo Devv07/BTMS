@@ -51,6 +51,13 @@ const login = async (data) => {
     throw new Error("User not found");
   }
 
+  // Check if account is active
+  if (user.status === "INACTIVE") {
+    throw new Error(
+      "Your account has been deactivated. Please contact support."
+    );
+  }
+
   const ok = await comparePassword(data.password, user.password);
 
   console.log("Password match:", ok);
@@ -65,6 +72,7 @@ const login = async (data) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      status: user.status,
     },
     token: generateToken(user),
   };

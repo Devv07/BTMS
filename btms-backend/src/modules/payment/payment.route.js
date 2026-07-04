@@ -4,8 +4,8 @@ const router = express.Router();
 
 const paymentController = require("./payment.controller");
 
-const authMiddleware = require("../../middleware/auth.middleware");
-const roleMiddleware = require("../../middleware/role.middleware");
+const authMiddleware = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 router.post(
   "/",
@@ -22,7 +22,7 @@ router.post(
 router.post(
   "/refund",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   paymentController.refundPayment
 );
 
@@ -39,7 +39,7 @@ router.get(
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   paymentController.getPayments
 );
 

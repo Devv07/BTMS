@@ -17,6 +17,7 @@ const reviewRoutes = require("./modules/reviews/review.route");
 const couponRoutes = require("./modules/coupons/coupon.route");
 const refundRoutes = require("./modules/refund/refund.route");
 const dashboardRoutes = require("./modules/dashboard/dashboard.route");
+const userRoutes = require("./modules/user/user.route");
 
 
 const app = express();
@@ -30,6 +31,7 @@ app.use(cookieParser());
 
 // ROUTES
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/seats", seatRoutes);

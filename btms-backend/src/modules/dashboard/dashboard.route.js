@@ -4,48 +4,48 @@ const router = express.Router();
 
 const dashboardController = require("./dashboard.controller");
 
-const authMiddleware = require("../../middleware/auth.middleware");
-const roleMiddleware = require("../../middleware/role.middleware");
+const authMiddleware = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getDashboardSummary
 );
 
 router.get(
   "/bookings",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getBookingAnalytics
 );
 
 router.get(
   "/revenue",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getRevenueAnalytics
 );
 
 router.get(
   "/buses",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getBusAnalytics
 );
 
 router.get(
   "/activity",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getRecentActivity
 );
 
 router.get(
   "/charts",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   dashboardController.getChartAnalytics
 );
 

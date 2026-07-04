@@ -4,14 +4,14 @@ const router = express.Router();
 
 const couponController = require("./coupon.controller");
 
-const authMiddleware = require("../../middleware/auth.middleware");
-const roleMiddleware = require("../../middleware/role.middleware");
+const authMiddleware = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 // create coupon
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.createCoupon
 );
 
@@ -19,7 +19,7 @@ router.post(
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.getCoupons
 );
 
@@ -34,7 +34,7 @@ router.post(
 router.get(
   "/:id",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.getCoupon
 );
 
@@ -42,7 +42,7 @@ router.get(
 router.patch(
   "/:id",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.updateCoupon
 );
 
@@ -50,7 +50,7 @@ router.patch(
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.deleteCoupon
 );
 
@@ -58,7 +58,7 @@ router.delete(
 router.patch(
   "/:id/status",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.updateCouponStatus
 );
 
@@ -66,7 +66,7 @@ router.patch(
 router.get(
   "/analytics",
   authMiddleware,
-  roleMiddleware("ADMIN", "SUPER_ADMIN"),
+  authorize("ADMIN", "SUPER_ADMIN"),
   couponController.getCouponAnalytics
 );
 

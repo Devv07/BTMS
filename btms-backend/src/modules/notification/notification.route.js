@@ -4,8 +4,8 @@ const router = express.Router();
 
 const controller = require("./notification.controller");
 
-const auth = require("../../middleware/auth.middleware");
-const role = require("../../middleware/role.middleware");
+const auth = require("../../middleware/authMiddleware");
+const role = require("../../middleware/authorize");
 
 // ========================================
 // SEND EMAIL

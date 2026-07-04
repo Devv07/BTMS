@@ -3,8 +3,8 @@ const router = express.Router();
 
 const bookingController = require("./booking.controller");
 
-const auth = require("../../middleware/auth.middleware");
-const authorize = require("../../middleware/role.middleware");
+const auth = require("../../middleware/authMiddleware");
+const authorize = require("../../middleware/authorize");
 
 // CREATE BOOKING
 router.post(
